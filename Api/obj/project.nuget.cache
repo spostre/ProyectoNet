@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "cTCLVQeDMnQ=",
+  "success": true,
+  "projectFilePath": "/home/camper/Documentos/ProyectoNet/Api/Api.csproj",
+  "expectedPackageFiles": [
+    "/home/camper/.nuget/packages/microsoft.aspnetcore.openapi/10.0.8/microsoft.aspnetcore.openapi.10.0.8.nupkg.sha512",
+    "/home/camper/.nuget/packages/microsoft.openapi/2.0.0/microsoft.openapi.2.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}
