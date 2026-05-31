@@ -1,0 +1,12 @@
+E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\ProyectoNet\Domain\bin\Debug\net10.0\Domain.deps.json
+E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\ProyectoNet\Domain\bin\Debug\net10.0\Domain.dll
+E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\ProyectoNet\Domain\bin\Debug\net10.0\Domain.pdb
+E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\ProyectoNet\Domain\obj\Debug\net10.0\Domain.GeneratedMSBuildEditorConfig.editorconfig
+E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\ProyectoNet\Domain\obj\Debug\net10.0\Domain.AssemblyInfoInputs.cache
+E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\ProyectoNet\Domain\obj\Debug\net10.0\Domain.AssemblyInfo.cs
+E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\ProyectoNet\Domain\obj\Debug\net10.0\Domain.csproj.CoreCompileInputs.cache
+E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\ProyectoNet\Domain\obj\Debug\net10.0\Domain.sourcelink.json
+E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\ProyectoNet\Domain\obj\Debug\net10.0\Domain.dll
+E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\ProyectoNet\Domain\obj\Debug\net10.0\refint\Domain.dll
+E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\ProyectoNet\Domain\obj\Debug\net10.0\Domain.pdb
+E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\ProyectoNet\Domain\obj\Debug\net10.0\ref\Domain.dll
