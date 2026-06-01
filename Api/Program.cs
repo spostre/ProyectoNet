@@ -17,7 +17,8 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AutoTallerDbContext>(options =>
 {
-    options.UseNpgsql(connectionString);
+    var serverVersion = new MySqlServerVersion(new Version(8, 0, 30));
+    options.UseMySql(connectionString, serverVersion);
 });
 
 // 2. Unit of Work & Services
@@ -85,5 +86,21 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// 7. Automatic Database Migration & Creation on Startup
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AutoTallerDbContext>();
+        context.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Ocurrió un error al aplicar las migraciones de la base de datos.");
+    }
+}
 
 app.Run();

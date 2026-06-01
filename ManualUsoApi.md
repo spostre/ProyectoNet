@@ -5,16 +5,18 @@ Esta guía te muestra cómo probar **AutoTallerManager** siguiendo el **orden l�
 ---
 
 ## 📋 PREPARACIÓN (Paso Único)
-Abre la terminal en la raíz del proyecto y ejecuta estos comandos para crear la base de datos con todos los datos iniciales y arrancar el servidor:
 
-```bash
-# 1. Crear base de datos PostgreSQL con datos semilla (Usuarios, Clientes, Autos y Repuestos)
-dotnet ef database update --project Infrastructure --startup-project Api
+El sistema ahora utiliza **MySQL** como motor de base de datos y está configurado para **crear y migrar la base de datos de forma 100% automática** al iniciar la API. No necesitas ejecutar comandos de Entity Framework manualmente.
 
-# 2. Arrancar la API
-dotnet run --project Api
-```
-*La API quedará escuchando en `http://localhost:5003`.*
+### Pasos para iniciar:
+
+1. **Asegura tu MySQL local**: Verifica que tu servidor MySQL esté activo (usualmente en el puerto `3306`).
+2. **Configura tus credenciales**: Abre el archivo [appsettings.json](file:///e:/Users/moggamex/Documents/moggamex/todo/learn/campuslands/Net/practica/ProyectoNet/Api/appsettings.json) y ajusta los campos de usuario (`User`) y contraseña (`Password` o `Pwd`) si tu servidor MySQL local usa credenciales personalizadas (por defecto viene configurado para `root` sin contraseña).
+3. **Inicia la API**: Abre la terminal en la raíz del proyecto y ejecuta:
+   ```bash
+   dotnet run --project Api
+   ```
+   *Al iniciar, la API detectará si la base de datos `AutoTallerManager` no existe en tu MySQL, la creará de forma transparente, generará todas las tablas y sembrará los datos semilla de prueba. Quedará escuchando en `http://localhost:5003`.*
 
 > [!IMPORTANT]
 > **Cómo usar la seguridad en Insomnia:**
