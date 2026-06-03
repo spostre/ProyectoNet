@@ -137,5 +137,5 @@ E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\Proyect
 E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\ProyectoNet\Api\obj\Debug\net10.0\Api.pdb
 E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\ProyectoNet\Api\obj\Debug\net10.0\Api.genruntimeconfig.cache
 E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\ProyectoNet\Api\obj\Debug\net10.0\ref\Api.dll
-E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\ProyectoNet\Api\bin\Debug\net10.0\Npgsql.dll
-E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\ProyectoNet\Api\bin\Debug\net10.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll
+E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\ProyectoNet\Api\bin\Debug\net10.0\MySqlConnector.dll
+E:\Users\moggamex\Documents\moggamex\todo\learn\campuslands\Net\practica\ProyectoNet\Api\bin\Debug\net10.0\Pomelo.EntityFrameworkCore.MySql.dll

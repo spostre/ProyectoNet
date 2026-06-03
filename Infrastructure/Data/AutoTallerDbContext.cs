@@ -42,7 +42,6 @@ public class AutoTallerDbContext : DbContext
         // Vehiculo
         modelBuilder.Entity<Vehiculo>(entity =>
         {
-            entity.HasIndex(e => e.Vin).IsUnique();
             entity.Property(e => e.Vin).HasMaxLength(50).IsRequired();
             entity.Property(e => e.Marca).HasMaxLength(50);
             entity.Property(e => e.Modelo).HasMaxLength(50);

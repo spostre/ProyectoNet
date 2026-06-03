@@ -68,13 +68,8 @@ public class VehiculosController : ControllerBase
     [Authorize(Roles = "Admin,Recepcionista")]
     public async Task<IActionResult> Create([FromBody] CreateVehiculoDto dto, [FromQuery] int clienteId)
     {
-        // Verificar si el cliente existe
         var cliente = await _unitOfWork.Clientes.GetByIdAsync(clienteId);
         if (cliente == null) return BadRequest(new { Message = $"El cliente con Id {clienteId} no existe." });
-
-        // Verificar que el VIN sea único
-        var existing = await _unitOfWork.Vehiculos.FindAsync(v => v.Vin == dto.Vin);
-        if (existing.Any()) return BadRequest(new { Message = $"El vehículo con VIN '{dto.Vin}' ya está registrado." });
 
         var vehiculo = _mapper.Map<Vehiculo>(dto);
         vehiculo.AsignarCliente(clienteId);
@@ -94,13 +89,6 @@ public class VehiculosController : ControllerBase
     {
         var vehiculo = await _unitOfWork.Vehiculos.GetByIdAsync(id);
         if (vehiculo == null) return NotFound(new { Message = $"Vehículo con Id {id} no encontrado." });
-
-        // Validar VIN único si está cambiando
-        if (vehiculo.Vin != dto.Vin)
-        {
-            var existing = await _unitOfWork.Vehiculos.FindAsync(v => v.Vin == dto.Vin);
-            if (existing.Any()) return BadRequest(new { Message = $"El vehículo con VIN '{dto.Vin}' ya está registrado." });
-        }
 
         vehiculo.Marca = dto.Marca;
         vehiculo.Modelo = dto.Modelo;
