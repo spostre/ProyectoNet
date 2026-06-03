@@ -1,722 +1,186 @@
-# 🛠️ Manual Completo de la API — AutoTallerManager
+# Manual Completo de la API - AutoTallerManager
 
-API REST para la gestión integral de un taller mecánico.  
+API REST para la gestion integral de un taller mecanico.
 **Base URL:** `http://localhost:5003`
 
 ---
 
-## 📋 PREPARACIÓN
+## 1. PREPARACION E INICIO
 
-El sistema utiliza **MySQL** y crea la base de datos automáticamente al iniciar.
+El sistema utiliza **MySQL** y crea la base de datos automaticamente al iniciar.
 
-1. Verifica que tu servidor MySQL esté activo en el puerto `3306`.
+1. Verifica que tu servidor MySQL este activo en el puerto `3306`.
 2. Ajusta las credenciales si es necesario en `Api/appsettings.json`:
    ```json
    "DefaultConnection": "Server=localhost;Port=3306;Database=AutoTallerManager;User=root;Password=;"
    ```
-3. Inicia la API desde la raíz del proyecto:
+3. Inicia la API desde la raiz del proyecto:
    ```bash
    dotnet run --project Api
    ```
 
 ---
 
-## 🧭 CÓMO USAR INSOMNIA — GUÍA RÁPIDA
+## 2. CONCEPTOS BASICOS: COMO FUNCIONA TODO
 
-Antes de empezar, entiende la diferencia entre los tipos de petición y cómo configurarlas:
+El taller mecanico funciona a traves de un flujo definido de 5 pasos.
+**Importante:** Esta API es un backend, lo que significa que **no tiene pantallas ni botones fisicos**. Todo lo que los empleados del taller hacen en la vida real (registrar un auto, descontar repuestos, facturar) se hace enviando peticiones web a esta API. Para las pruebas, usaremos la herramienta **Insomnia** para simular que somos los diferentes empleados del taller enviando esas peticiones.
 
-### ¿Qué significa GET, POST, PUT, DELETE?
+### Paso 1: El taller se prepara (Admin)
+Antes de que llegue cualquier cliente, el Admin configura el sistema enviando peticiones a la API. Crea las cuentas del Recepcionista y del Mecanico para que puedan iniciar sesion. Tambien llena el inventario de repuestos: agrega cada pieza (filtros, bujias, pastillas de freno) con su codigo, precio unitario y stock.
 
-| Método | ¿Para qué sirve? | ¿Lleva body (JSON)? |
-|---|---|---|
-| `GET` | **Consultar / Leer** datos | ❌ No |
-| `POST` | **Crear** un nuevo registro | ✅ Sí |
-| `PUT` | **Editar** un registro existente | ✅ Sí |
-| `DELETE` | **Eliminar** un registro | ❌ No |
+### Paso 2: Llega un cliente nuevo (Recepcionista)
+El Recepcionista, usando Insomnia, envia un `POST` al sistema para registrar al cliente y su vehiculo (marca, modelo, VIN). El sistema vincula el vehiculo al cliente. 
 
----
+### Paso 3: El vehiculo entra al taller (Recepcionista)
+El Recepcionista abre una Orden de Servicio enviando otro `POST`. Indica que vehiculo ingreso, el tipo de servicio (Mantenimiento, Reparacion, Diagnostico) y a que mecanico se le asigna. El sistema crea la orden con estado "Ingresada" (es como el ticket de entrada).
 
-### Cómo configurar una petición en Insomnia paso a paso
+### Paso 4: El mecanico trabaja (Mecanico)
+Aqui es donde el mecanico interactua con la API. Cuando termina el trabajo fisico con el auto, abre Insomnia y envia un reporte mediante una peticion `PUT`.
+En esa peticion indica los repuestos que utilizo (ej: 2 filtros, 4 bujias) y cambia el estado a "Terminada".
+El sistema recibe esto y automaticamente descuenta esos repuestos del stock del taller.
 
-#### Para una petición `GET` (consultar):
-1. Abre Insomnia y haz clic en **New Request**.
-2. En el selector de método (a la izquierda de la URL), deja **GET**.
-3. Escribe la URL en el campo grande, por ejemplo: `http://localhost:5003/api/Clientes`
-4. Ve a la pestaña **Auth → Bearer Token** y pega tu token en el campo TOKEN.
-5. Haz clic en **Send**.
-6. La respuesta aparecerá en el panel derecho. Si ves un JSON con datos, ¡funcionó!
-
-#### Para una petición `POST` (crear):
-1. Crea una nueva petición y cambia el método a **POST**.
-2. Escribe la URL, por ejemplo: `http://localhost:5003/api/Clientes/registrar-con-vehiculo`
-3. Ve a **Auth → Bearer Token** y pega tu token.
-4. Ve a la pestaña **Body** y selecciona **JSON** en el menú desplegable.
-5. Escribe o pega el JSON con los datos que quieres crear (ver cada sección abajo).
-6. Haz clic en **Send**.
-7. Si ves `201 Created` o `200 OK` en el panel derecho, el registro fue creado.
-
-#### Para una petición `PUT` (editar un registro existente):
-> [!IMPORTANT]
-> El `PUT` **reemplaza completamente** los datos del registro. Debes enviar **todos los campos**, incluso los que no cambiaron. Si omites un campo, quedará vacío en la base de datos.
-
-1. Crea una nueva petición y cambia el método a **PUT**.
-2. Escribe la URL **incluyendo el ID** del registro que quieres editar.
-   - Ejemplo para editar el cliente con Id 2: `http://localhost:5003/api/Clientes/2`
-   - *(El número al final es el ID. Cámbialo según el registro que quieres editar.)*
-3. Ve a **Auth → Bearer Token** y pega tu token.
-4. Ve a la pestaña **Body → JSON** y escribe el JSON con los **nuevos valores** que quieres guardar.
-5. Haz clic en **Send**.
-6. Si ves `200 OK` y el JSON de respuesta tiene los datos actualizados, ¡la edición fue exitosa!
-
-#### Para una petición `DELETE` (eliminar):
-1. Crea una nueva petición y cambia el método a **DELETE**.
-2. Escribe la URL con el ID del registro a eliminar: `http://localhost:5003/api/Clientes/2`
-3. Ve a **Auth → Bearer Token** y pega tu token.
-4. **No necesitas Body.**
-5. Haz clic en **Send**.
-6. Si ves `204 No Content`, el registro fue eliminado correctamente.
+### Paso 5: Se genera la factura (Mecanico o Admin)
+Finalmente, el mecanico llama al endpoint de facturar (un `POST`). En ese instante, el sistema calcula matematicamente:
+`(Precio de cada repuesto x cantidad usada) + Costo fijo de mano de obra = TOTAL`.
+La factura se guarda, la orden queda "Cerrada" y ya no puede modificarse. La API no procesa el pago monetario, solo genera el documento de cobro.
 
 ---
 
-### Cómo autenticarte (obtener y usar el token)
+## 3. ROLES DEL SISTEMA Y PERMISOS
 
-> [!IMPORTANT]
-> Casi todos los endpoints requieren un token JWT. Sin él, recibirás `401 Unauthorized`.
+El sistema tiene **3 tipos de usuario** que inician sesion y reciben un token. El `Cliente` (dueno del auto) **no es un usuario de la API** - es solo un registro gestionado por el personal.
 
-1. Haz `POST` al endpoint de login (sin token, es público).
-2. En la respuesta verás un campo `"token"` con un texto largo. **Cópialo completo.**
-3. En cada petición protegida, ve a la pestaña **Auth**, selecciona **Bearer Token** y pega el token en el campo **TOKEN**.
-4. El token dura **60 minutos**. Pasado ese tiempo, debes hacer login de nuevo.
+### Admin (Superusuario)
+Puede hacer absolutamente todo: gestionar usuarios, inventario completo, ordenes, facturas, y tiene acceso exclusivo a la **Bitacora de Auditorias** (el historial inborrable de quien hizo cada operacion).
+
+### Recepcionista (Atencion al cliente)
+Registra clientes, vehiculos y crea las nuevas Ordenes de Servicio cuando ingresan los autos. No puede gestionar repuestos ni facturar.
+
+### Mecanico (Tecnico del taller)
+Solo puede consultar datos (clientes, repuestos, ordenes) y su funcion principal es **registrar su trabajo**. Puede actualizar el estado de una orden, reportar repuestos usados y finalmente generar la factura. No puede crear clientes ni usuarios.
 
 ---
 
-## 📊 DATOS SEMILLA (Pre-cargados automáticamente al iniciar)
+## 4. DATOS SEMILLA (Precargados al iniciar)
 
 | Entidad | Id | Datos |
 |---|---|---|
-| Usuario | 1 | `admin@taller.com` / `admin123` — Rol: `Admin` |
-| Usuario | 2 | `mecanico@taller.com` / `mecanico123` — Rol: `Mecanico` |
-| Cliente | 1 | Juan Perez — `juan@perez.com` |
-| Vehículo | 1 | Toyota Corolla 2020 — VIN: `VIN1234567890COROLLA` — ClienteId: 1 |
-| Repuesto | 1 | Filtro de Aceite — `FILT-ACEITE` — $15.50 — Stock: 50 |
-| Repuesto | 2 | Pastillas de freno — `PAST-FREN-DEL` — $45.00 — Stock: 20 |
-| Repuesto | 3 | Bujía de platino — `BUJIA-PLAT` — $8.20 — Stock: 100 |
+| Usuario | 1 | `admin@taller.com` / `admin123` - Rol: Admin |
+| Usuario | 2 | `mecanico@taller.com` / `mecanico123` - Rol: Mecanico |
+| Cliente | 1 | Juan Perez - `juan@perez.com` |
+| Vehiculo | 1 | Toyota Corolla 2020 - VIN: `VIN1234567890COROLLA` - ClienteId: 1 |
+| Repuesto | 1 | Filtro de Aceite - `FILT-ACEITE` - $15.50 - Stock: 50 |
+| Repuesto | 2 | Pastillas de freno - `PAST-FREN-DEL` - $45.00 - Stock: 20 |
+| Repuesto | 3 | Bujia de platino - `BUJIA-PLAT` - $8.20 - Stock: 100 |
+
+> No existe un usuario Recepcionista en los datos semilla. Debes crearlo con un POST desde la cuenta Admin.
+
+---
+
+## 5. GUIA RAPIDA DE INSOMNIA Y AUTENTICACION
+
+| Metodo | Para que sirve? | Lleva body (JSON)? |
+|---|---|---|
+| `GET` | **Consultar / Leer** datos | No |
+| `POST` | **Crear** un nuevo registro o accion | Si |
+| `PUT` | **Editar** un registro existente | Si |
+| `DELETE` | **Eliminar** un registro | No |
+
+### Obtener y usar el Token
+> [!IMPORTANT]
+> Casi todos los endpoints requieren token. Sin el recibiras `401 Unauthorized`.
+
+1. Haz `POST http://localhost:5003/api/Usuarios/login` con el correo y contrasena de tu rol.
+2. Copia el `"token"` completo de la respuesta.
+3. En cada peticion protegida ve a **Auth > Bearer Token** y pega el token en el campo **TOKEN**. El token dura 60 minutos.
+
+### Regla para el PUT (Editar)
+> [!IMPORTANT]
+> El `PUT` **reemplaza completamente** el registro. Debes enviar **todos los campos** en el Body JSON, incluso los que no cambiaste, o de lo contrario quedaran vacios en la base de datos.
 
 ---
 ---
 
-## 👤 USUARIOS — `/api/Usuarios`
+## 6. REFERENCIA DE ENDPOINTS
 
----
+A continuacion, la lista completa de peticiones disponibles.
 
-### `POST /api/Usuarios/login` — Iniciar Sesión
-**🔓 Sin token** — este endpoint es público.
+### USUARIOS - `/api/Usuarios`
 
-**Configura en Insomnia:**
-- Método: `POST`
-- URL: `http://localhost:5003/api/Usuarios/login`
-- Auth: *ninguna*
-- Body (JSON):
-```json
-{
-  "correo": "admin@taller.com",
-  "password": "admin123"
-}
-```
+* `POST /api/Usuarios/login` (Publico) - Inicia sesion y obtiene el token.
+* `GET /api/Usuarios` (Solo Admin) - Lista todos los usuarios.
+* `POST /api/Usuarios` (Solo Admin) - Crea un nuevo usuario.
+* `PUT /api/Usuarios/{id}` (Solo Admin) - Edita correo, contrasena o rol de un usuario.
+* `DELETE /api/Usuarios/{id}` (Solo Admin) - Elimina un usuario.
 
-**Respuesta esperada `200 OK`:**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "rol": "Admin",
-  "correo": "admin@taller.com"
-}
-```
-➡️ **Copia el valor de `"token"` y úsalo en el campo Bearer Token de las demás peticiones.**
+### CLIENTES - `/api/Clientes`
 
-*Otras credenciales disponibles: `mecanico@taller.com` / `mecanico123`*
+* `POST /api/Clientes/registrar-con-vehiculo` (Admin/Recep) - Crea un cliente nuevo. Opcionalmente puede enviar array de `vehiculos` en el mismo JSON para registrarlos de una vez.
+* `POST /api/Clientes/{id}/vehiculos` (Admin/Recep) - Anade uno o mas vehiculos a un cliente ya existente.
+* `GET /api/Clientes` (Todos) - Lista clientes paginados.
+* `GET /api/Clientes/{id}` (Todos) - Ver detalle de un cliente.
+* `PUT /api/Clientes/{id}` (Admin/Recep) - Edita nombre/telefono/correo.
+* `DELETE /api/Clientes/{id}` (Solo Admin) - Elimina un cliente.
 
----
+### VEHICULOS - `/api/Vehiculos`
 
-### `GET /api/Usuarios` — Listar todos los usuarios
-**🔐 Rol requerido:** `Admin`
+* `GET /api/Vehiculos` (Todos) - Lista todos o filtra (ej: `?clienteId=2` o `?vin=HONDA`).
+* `GET /api/Vehiculos/{id}` (Todos) - Detalle de un vehiculo especifico.
+* `POST /api/Vehiculos?clienteId={id}` (Admin/Recep) - Registrar un auto suelto a un cliente.
+* `PUT /api/Vehiculos/{id}` (Admin/Recep) - Edita datos (marca, modelo, kilometraje).
+* `DELETE /api/Vehiculos/{id}` (Solo Admin) - Elimina un vehiculo.
 
-- Método: `GET`
-- URL: `http://localhost:5003/api/Usuarios?pageNumber=1&pageSize=10`
-- Auth: Bearer Token
+### REPUESTOS - `/api/Repuestos`
+*(Rate Limit: Maximo 30 peticiones por minuto)*
 
----
+* `GET /api/Repuestos` (Todos) - Ver el inventario.
+* `GET /api/Repuestos/{id}` (Todos) - Ver un repuesto en detalle.
+* `POST /api/Repuestos` (Solo Admin) - Registrar nueva pieza en el inventario.
+* `PUT /api/Repuestos/{id}` (Solo Admin) - Editar repuesto (precio o stock manual).
+* `DELETE /api/Repuestos/{id}` (Solo Admin) - Eliminar repuesto.
 
-### `GET /api/Usuarios/{id}` — Ver un usuario específico
-**🔐 Rol requerido:** `Admin`
+### ORDENES DE SERVICIO - `/api/OrdenesServicio`
+*(Rate Limit: Maximo 60 peticiones por minuto)*
 
-- Método: `GET`
-- URL: `http://localhost:5003/api/Usuarios/1` *(cambia el `1` por el ID que buscas)*
-- Auth: Bearer Token
-
----
-
-### `POST /api/Usuarios` — Crear nuevo usuario
-**🔐 Rol requerido:** `Admin`
-
-- Método: `POST`
-- URL: `http://localhost:5003/api/Usuarios`
-- Auth: Bearer Token
-- Body (JSON):
-```json
-{
-  "correo": "recepcionista@taller.com",
-  "password": "recepcionista123",
-  "rol": "Recepcionista"
-}
-```
-*Roles válidos: `Admin`, `Mecanico`, `Recepcionista`*
-
----
-
-### `PUT /api/Usuarios/{id}` — Editar usuario existente
-**🔐 Rol requerido:** `Admin`
-
-> Úsalo cuando quieras cambiar el correo, contraseña o rol de un usuario ya creado.
-
-- Método: `PUT`
-- URL: `http://localhost:5003/api/Usuarios/3` *(reemplaza `3` con el ID del usuario a editar)*
-- Auth: Bearer Token
-- Body (JSON) — **incluye todos los campos aunque no todos cambien:**
-```json
-{
-  "correo": "recepcionista@taller.com",
-  "password": "nuevaPassword456",
-  "rol": "Recepcionista"
-}
-```
-
----
-
-### `DELETE /api/Usuarios/{id}` — Eliminar usuario
-**🔐 Rol requerido:** `Admin`
-
-- Método: `DELETE`
-- URL: `http://localhost:5003/api/Usuarios/3` *(reemplaza `3` con el ID del usuario a eliminar)*
-- Auth: Bearer Token
-- Sin body.
-- Respuesta: `204 No Content`
-
----
----
-
-## 🧑 CLIENTES — `/api/Clientes`
-
----
-
-### `POST /api/Clientes/registrar-con-vehiculo` — Crear cliente + vehículos
-**🔐 Rol requerido:** `Admin`, `Recepcionista`
-
-Crea un nuevo cliente y opcionalmente uno o más vehículos en una sola operación.
-
-- Método: `POST`
-- URL: `http://localhost:5003/api/Clientes/registrar-con-vehiculo`
-- Auth: Bearer Token
-- Body (JSON):
-```json
-{
-  "nombre": "Maria Lopez",
-  "telefono": "555-8888",
-  "correo": "maria@lopez.com",
-  "vehiculos": [
-    {
-      "marca": "Honda",
-      "modelo": "Civic",
-      "anio": 2021,
-      "vin": "VINHONDA2021CIVIC001",
-      "kilometraje": 25000
-    }
+* `GET /api/OrdenesServicio` (Todos) - Listar historial de ordenes.
+* `POST /api/OrdenesServicio` (Admin/Recep) - Abre una orden indicando `vehiculoId`, `tipoServicio` y `mecanicoId`. Entra en estado "Ingresada".
+* `PUT /api/OrdenesServicio/{id}/trabajo?nuevoEstado=Terminada` (Admin/Mecanico) - El **Mecanico envia esta peticion** para reportar los repuestos que uso. El sistema descuenta el stock. En el body (JSON) envia la lista exacta de repuestos, por ejemplo:
+  ```json
+  [
+    { "repuestoId": 1, "cantidad": 2 },
+    { "repuestoId": 3, "cantidad": 4 }
   ]
-}
-```
-> Si no quieres añadir vehículos ahora, envía `"vehiculos": []`.
+  ```
+* `POST /api/OrdenesServicio/{id}/facturar` (Admin/Mecanico) - Genera la factura matematicamente y cierra la orden.
 
----
+### FACTURAS - `/api/Facturas`
+*(Las facturas son inmutables)*
 
-### `POST /api/Clientes/{id}/vehiculos` — Añadir vehículos a cliente existente
-**🔐 Rol requerido:** `Admin`, `Recepcionista`
+* `GET /api/Facturas` (Todos) - Ver historial. Filtros utiles: `?clienteId=2` o `?ordenServicioId=1`.
+* `GET /api/Facturas/{id}` (Todos) - Ver desglose de la factura.
+* `GET /api/Facturas/orden/{ordenId}` (Todos) - Buscar factura usando el ID de la orden.
 
-> Útil cuando ya tienes un cliente registrado y quiere ingresar un auto adicional al taller.
+### AUDITORIAS - `/api/Auditorias`
 
-- Método: `POST`
-- URL: `http://localhost:5003/api/Clientes/2/vehiculos` *(reemplaza `2` con el ID del cliente)*
-- Auth: Bearer Token
-- Body (JSON) — **es un array, aunque solo agregues uno:**
-```json
-[
-  {
-    "marca": "Toyota",
-    "modelo": "Yaris",
-    "anio": 2022,
-    "vin": "VINYARIS2022001",
-    "kilometraje": 10000
-  }
-]
-```
-
-**Respuesta `200 OK`:**
-```json
-{
-  "message": "1 vehículo(s) agregado(s) al cliente Id 2.",
-  "vehiculos": [
-    { "id": 3, "marca": "Toyota", "modelo": "Yaris", "vin": "VINYARIS2022001" }
-  ]
-}
-```
-
----
-
-### `GET /api/Clientes` — Listar todos los clientes
-**🔐 Rol requerido:** Cualquier usuario autenticado
-
-- Método: `GET`
-- URL: `http://localhost:5003/api/Clientes?pageNumber=1&pageSize=10`
-- Auth: Bearer Token
-
----
-
-### `GET /api/Clientes/{id}` — Ver un cliente específico
-**🔐 Rol requerido:** Cualquier usuario autenticado
-
-- Método: `GET`
-- URL: `http://localhost:5003/api/Clientes/2` *(cambia el `2` por el ID que buscas)*
-- Auth: Bearer Token
-
----
-
-### `PUT /api/Clientes/{id}` — Editar datos de un cliente
-**🔐 Rol requerido:** `Admin`, `Recepcionista`
-
-> Úsalo para corregir el nombre, teléfono o correo de un cliente ya registrado.
-
-- Método: `PUT`
-- URL: `http://localhost:5003/api/Clientes/2` *(reemplaza `2` con el ID del cliente a editar)*
-- Auth: Bearer Token
-- Body (JSON) — **escribe los nuevos datos. Todos los campos son obligatorios:**
-```json
-{
-  "nombre": "Maria Lopez Actualizada",
-  "telefono": "555-9999",
-  "correo": "maria.nueva@lopez.com",
-  "vehiculos": []
-}
-```
-*El campo `"vehiculos": []` es requerido por el DTO pero no modifica los vehículos existentes.*
-
----
-
-### `DELETE /api/Clientes/{id}` — Eliminar cliente
-**🔐 Rol requerido:** `Admin`
-
-> ⚠️ Fallará si el cliente tiene vehículos con órdenes de servicio activas (no cerradas).
-
-- Método: `DELETE`
-- URL: `http://localhost:5003/api/Clientes/2`
-- Auth: Bearer Token
-- Sin body.
-- Respuesta: `204 No Content`
+* `GET /api/Auditorias` (Solo Admin) - Ver la bitacora de quien inserto/modifico/elimino cada cosa en la base de datos, con la fecha y valores nuevos.
 
 ---
 ---
 
-## 🚗 VEHÍCULOS — `/api/Vehiculos`
-
----
-
-### `GET /api/Vehiculos` — Listar vehículos (con filtros opcionales)
-**🔐 Rol requerido:** Cualquier usuario autenticado
-
-Puedes filtrar por cliente o buscar por VIN parcial.
-
-- Método: `GET`
-- URLs de ejemplo:
-```
-http://localhost:5003/api/Vehiculos
-http://localhost:5003/api/Vehiculos?clienteId=2
-http://localhost:5003/api/Vehiculos?vin=HONDA
-http://localhost:5003/api/Vehiculos?clienteId=2&pageNumber=1&pageSize=5
-```
-
----
-
-### `GET /api/Vehiculos/{id}` — Ver un vehículo específico
-**🔐 Rol requerido:** Cualquier usuario autenticado
-
-- Método: `GET`
-- URL: `http://localhost:5003/api/Vehiculos/1`
-- Auth: Bearer Token
-
----
-
-### `POST /api/Vehiculos?clienteId={id}` — Registrar un vehículo a un cliente
-**🔐 Rol requerido:** `Admin`, `Recepcionista`
-
-> Alternativa para agregar un solo vehículo a un cliente existente. El `clienteId` va en la URL como parámetro de query, **no en el body**.
-
-- Método: `POST`
-- URL: `http://localhost:5003/api/Vehiculos?clienteId=2`
-- Auth: Bearer Token
-- Body (JSON):
-```json
-{
-  "marca": "Chevrolet",
-  "modelo": "Spark",
-  "anio": 2023,
-  "vin": "VINSPARK2023001",
-  "kilometraje": 5000
-}
-```
-
----
-
-### `PUT /api/Vehiculos/{id}` — Editar datos de un vehículo
-**🔐 Rol requerido:** `Admin`, `Recepcionista`
-
-> Úsalo para actualizar el kilometraje, corregir el VIN u otros datos del vehículo.
-
-- Método: `PUT`
-- URL: `http://localhost:5003/api/Vehiculos/2` *(reemplaza `2` con el ID del vehículo a editar)*
-- Auth: Bearer Token
-- Body (JSON) — **incluye todos los campos:**
-```json
-{
-  "marca": "Honda",
-  "modelo": "Civic",
-  "anio": 2021,
-  "vin": "VINHONDA2021CIVIC001",
-  "kilometraje": 30000
-}
-```
-
----
-
-### `DELETE /api/Vehiculos/{id}` — Eliminar vehículo
-**🔐 Rol requerido:** `Admin`
-
-> ⚠️ Fallará si el vehículo tiene órdenes de servicio activas.
-
-- Método: `DELETE`
-- URL: `http://localhost:5003/api/Vehiculos/2`
-- Auth: Bearer Token
-- Sin body.
-- Respuesta: `204 No Content`
-
----
----
-
-## 🔧 REPUESTOS — `/api/Repuestos`
-
-> **Rate Limit:** Máximo **30 peticiones por minuto.**
-
----
-
-### `GET /api/Repuestos` — Ver inventario completo
-**🔐 Rol requerido:** Cualquier usuario autenticado
-
-- Método: `GET`
-- URL: `http://localhost:5003/api/Repuestos?pageNumber=1&pageSize=10`
-- Auth: Bearer Token
-
----
-
-### `GET /api/Repuestos/{id}` — Ver un repuesto específico
-**🔐 Rol requerido:** Cualquier usuario autenticado
-
-- Método: `GET`
-- URL: `http://localhost:5003/api/Repuestos/1`
-- Auth: Bearer Token
-
----
-
-### `POST /api/Repuestos` — Crear nuevo repuesto
-**🔐 Rol requerido:** `Admin`
-
-- Método: `POST`
-- URL: `http://localhost:5003/api/Repuestos`
-- Auth: Bearer Token
-- Body (JSON):
-```json
-{
-  "codigo": "CORREA-DIST-01",
-  "descripcion": "Correa de distribución reforzada",
-  "cantidadStock": 15,
-  "precioUnitario": 75.00
-}
-```
-
----
-
-### `PUT /api/Repuestos/{id}` — Editar repuesto existente
-**🔐 Rol requerido:** `Admin`
-
-> Úsalo para cambiar el precio, actualizar el stock manualmente o corregir la descripción.
-
-- Método: `PUT`
-- URL: `http://localhost:5003/api/Repuestos/4` *(reemplaza `4` con el ID del repuesto a editar)*
-- Auth: Bearer Token
-- Body (JSON) — **todos los campos son obligatorios:**
-```json
-{
-  "codigo": "CORREA-DIST-01",
-  "descripcion": "Correa de distribución (descripción actualizada)",
-  "cantidadStock": 20,
-  "precioUnitario": 80.00
-}
-```
-
----
-
-### `DELETE /api/Repuestos/{id}` — Eliminar repuesto
-**🔐 Rol requerido:** `Admin`
-
-- Método: `DELETE`
-- URL: `http://localhost:5003/api/Repuestos/4`
-- Auth: Bearer Token
-- Sin body.
-- Respuesta: `204 No Content`
-
----
----
-
-## 📋 ÓRDENES DE SERVICIO — `/api/OrdenesServicio`
-
-> **Rate Limit:** Máximo **60 peticiones por minuto.**
-
----
-
-### Referencia: Estados posibles de una orden
-
-| Estado | Descripción |
-|---|---|
-| `Ingresada` | Recién creada — estado inicial automático |
-| `EnReparacion` | El mecánico está trabajando |
-| `Terminada` | Trabajo listo, pendiente de facturar |
-| `Cerrada` | Facturada y cerrada — estado final |
-| `Cancelada` | Cancelada — estado final |
-
-### Referencia: Tipos de servicio y costo de mano de obra
-
-| TipoServicio | Costo Mano de Obra |
-|---|---|
-| `MantenimientoPreventivo` | $150.00 |
-| `Reparacion` | $200.00 |
-| `Diagnostico` | $80.00 |
-
-### Fórmula de facturación
-
-```
-Total Repuestos  = Σ (PrecioUnitario × Cantidad de cada repuesto usado)
-Total Mano Obra  = Costo fijo según TipoServicio de la orden
-──────────────────────────────────────────────────────────────────────
-TOTAL FACTURA    = Total Repuestos + Total Mano Obra
-```
-
-**Ejemplo con datos semilla** (repuesto 1 ×2 unidades + repuesto 3 ×4 unidades, servicio MantenimientoPreventivo):
-```
-Filtro de Aceite:   $15.50 × 2 uds = $31.00
-Bujía de platino:   $ 8.20 × 4 uds = $32.80
-                    ─────────────────────────
-                    Total Repuestos = $63.80
-                    Total Mano Obra = $150.00
-                    ─────────────────────────
-                    TOTAL FACTURA   = $213.80
-```
-
----
-
-### `POST /api/OrdenesServicio` — Crear orden de servicio
-**🔐 Rol requerido:** `Admin`, `Recepcionista`
-
-El cliente deja el auto. Se registra qué servicio necesita y qué mecánico lo atenderá.
-
-- Método: `POST`
-- URL: `http://localhost:5003/api/OrdenesServicio`
-- Auth: Bearer Token
-- Body (JSON):
-```json
-{
-  "vehiculoId": 2,
-  "tipoServicio": "MantenimientoPreventivo",
-  "mecanicoId": 2
-}
-```
-
-**Respuesta `200 OK`:**
-```json
-{
-  "id": 1,
-  "vehiculoId": 2,
-  "tipoServicio": "MantenimientoPreventivo",
-  "estado": "Ingresada",
-  "mecanicoId": 2,
-  "fechaIngreso": "2026-06-02T18:00:00Z",
-  "aprobadaPorCliente": false
-}
-```
-➡️ **Anota el `"id"` que te devuelve** — lo necesitarás en los siguientes pasos.
-
----
-
-### `PUT /api/OrdenesServicio/{id}/trabajo?nuevoEstado={estado}` — Registrar trabajo del mecánico
-**🔐 Rol requerido:** `Admin`, `Mecanico`
-
-El mecánico reporta qué repuestos usó y cambia el estado de la orden. El stock de esos repuestos se descuenta automáticamente.
-
-- Método: `PUT`
-- URL: `http://localhost:5003/api/OrdenesServicio/1/trabajo?nuevoEstado=EnReparacion`
-  - *(reemplaza `1` con el ID de la orden)*
-  - *(cambia `EnReparacion` por el estado que quieras asignar)*
-- Auth: Bearer Token
-- Body (JSON) — **lista de repuestos utilizados:**
-```json
-[
-  {
-    "repuestoId": 1,
-    "cantidad": 2
-  },
-  {
-    "repuestoId": 3,
-    "cantidad": 4
-  }
-]
-```
-
-**Respuesta `200 OK`:**
-```json
-{
-  "message": "Trabajo actualizado correctamente."
-}
-```
-
----
-
-### `POST /api/OrdenesServicio/{id}/facturar` — Generar factura y cerrar la orden
-**🔐 Rol requerido:** `Admin`, `Mecanico`
-
-El auto está listo. El sistema calcula el total, genera la factura y cierra la orden automáticamente.
-
-- Método: `POST`
-- URL: `http://localhost:5003/api/OrdenesServicio/1/facturar` *(reemplaza `1` con el ID de la orden)*
-- Auth: Bearer Token
-- **Sin body** — deja el body vacío.
-
-**Respuesta `200 OK`:**
-```json
-{
-  "id": 1,
-  "ordenServicioId": 1,
-  "resumenServicios": "Servicio de MantenimientoPreventivo para vehículo 2",
-  "totalRepuestos": 63.80,
-  "totalManoObra": 150.00,
-  "total": 213.80,
-  "fechaGeneracion": "2026-06-02T18:30:00Z"
-}
-```
-
----
-
-### `GET /api/OrdenesServicio` — Listar todas las órdenes
-**🔐 Rol requerido:** Cualquier usuario autenticado
-
-- Método: `GET`
-- URL: `http://localhost:5003/api/OrdenesServicio?pageNumber=1&pageSize=10`
-- Auth: Bearer Token
-
----
----
-
-## 🧾 FACTURAS — `/api/Facturas`
-
-Las facturas son **inmutables** — una vez generadas no se pueden modificar ni eliminar. Solo se pueden consultar.
-
----
-
-### `GET /api/Facturas` — Listar facturas (con filtros opcionales)
-**🔐 Rol requerido:** Cualquier usuario autenticado
-
-Filtra por cliente, por orden de servicio específica, o por rango de fechas.
-
-- Método: `GET`
-- URLs de ejemplo:
-```
-http://localhost:5003/api/Facturas
-http://localhost:5003/api/Facturas?clienteId=2
-http://localhost:5003/api/Facturas?ordenServicioId=1
-http://localhost:5003/api/Facturas?fechaInicio=2026-06-01&fechaFin=2026-06-30
-http://localhost:5003/api/Facturas?clienteId=2&pageNumber=1&pageSize=10
-```
-
----
-
-### `GET /api/Facturas/{id}` — Ver una factura por su ID
-**🔐 Rol requerido:** Cualquier usuario autenticado
-
-- Método: `GET`
-- URL: `http://localhost:5003/api/Facturas/1`
-- Auth: Bearer Token
-
----
-
-### `GET /api/Facturas/orden/{ordenId}` — Ver la factura de una orden de servicio
-**🔐 Rol requerido:** Cualquier usuario autenticado
-
-> Útil si tienes el ID de la orden y quieres ver directamente su factura sin buscar el ID de la factura.
-
-- Método: `GET`
-- URL: `http://localhost:5003/api/Facturas/orden/1` *(reemplaza `1` con el ID de la orden)*
-- Auth: Bearer Token
-
----
----
-
-## 🔍 AUDITORÍAS — `/api/Auditorias`
-
-El sistema registra automáticamente **cada escritura** (crear, editar, eliminar) en todas las entidades, guardando quién hizo el cambio, cuándo y qué campos cambiaron.
-
----
-
-### `GET /api/Auditorias` — Ver bitácora completa
-**🔐 Rol requerido:** `Admin` — exclusivo
-
-Los registros vienen del más reciente al más antiguo.
-
-- Método: `GET`
-- URL: `http://localhost:5003/api/Auditorias?pageNumber=1&pageSize=20`
-- Auth: Bearer Token (solo funciona con token de Admin)
-
-**Respuesta `200 OK` (ejemplo):**
-```json
-[
-  {
-    "id": 5,
-    "entidadAfectada": "Vehiculo",
-    "accion": "Added",
-    "usuarioId": 1,
-    "usuarioCorreo": "admin@taller.com",
-    "fechaAccion": "2026-06-02T18:30:00Z",
-    "detalles": "Entidad Vehiculo con estado Added. Nuevos valores: Marca: Honda, Modelo: Civic, ..."
-  }
-]
-```
-
----
----
-
-## 🚀 FLUJO SECUENCIAL COMPLETO DEL TALLER
-
-Sigue estos pasos en orden para probar el ciclo de vida completo de un servicio en el taller:
-
-| Paso | Método | URL | Quién lo hace |
-|---|---|---|---|
-| 1 | `POST` | `/api/Usuarios/login` | Cualquiera — obtiene el token |
-| 2 | `POST` | `/api/Clientes/registrar-con-vehiculo` | Recepcionista / Admin |
-| 3 | `POST` | `/api/OrdenesServicio` | Recepcionista / Admin |
-| 4 | `PUT` | `/api/OrdenesServicio/1/trabajo?nuevoEstado=EnReparacion` | Mecánico / Admin |
-| 5 | `POST` | `/api/OrdenesServicio/1/facturar` | Mecánico / Admin |
-| 6 | `GET` | `/api/Facturas?clienteId=2` | Cualquier autenticado |
-| 7 | `GET` | `/api/Auditorias` | Solo Admin |
+## 7. FLUJO PASO A PASO EN INSOMNIA
+
+Sigue esta secuencia exacta para probar un ciclo de vida completo de inicio a fin:
+
+| Paso | Quien (Rol) | Metodo | Endpoint en Insomnia | Que ocurre logicamente |
+|---|---|---|---|---|
+| **1** | Admin | `POST` | `/api/Usuarios/login` | Obtiene su token inicial |
+| **2** | Admin | `POST` | `/api/Usuarios` | Crea el usuario Recepcionista |
+| **3** | Recep. | `POST` | `/api/Usuarios/login` | Inicia sesion y obtiene su propio token |
+| **4** | Recep. | `POST` | `/api/Clientes/registrar-con-vehiculo` | Registra a Maria y su Honda Civic |
+| **5** | Recep. | `POST` | `/api/OrdenesServicio` | Crea orden de Mantenimiento para el Civic |
+| **6** | Mecanico | `POST` | `/api/Usuarios/login` | Inicia sesion y obtiene su token |
+| **7** | Mecanico | `PUT` | `/api/OrdenesServicio/1/trabajo?nuevoEstado=Terminada` | Reporta que uso 2 filtros de aceite y la orden termina |
+| **8** | Mecanico | `POST` | `/api/OrdenesServicio/1/facturar` | La API suma los costos, genera Factura #1 y cierra la orden |
+| **9** | Recep. | `GET` | `/api/Facturas?clienteId=2` | Consulta cuanto le debe cobrar a Maria |
+| **10** | Admin | `GET` | `/api/Auditorias` | Revisa el historial de quien hizo los pasos 2 al 8 |
