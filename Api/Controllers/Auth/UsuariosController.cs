@@ -1,4 +1,4 @@
-using Application.DTOs;
+using Api.DTOs;
 using Application.Interfaces;
 using AutoMapper;
 using Domain.Entities;
@@ -12,11 +12,21 @@ using System.Text;
 
 namespace Api.Controllers.Auth;
 
+/// <summary>
+/// Controlador de seguridad y gestión de usuarios del sistema.
+/// Maneja el login con generación de JWT y el CRUD de usuarios (solo Admin).
+/// 
+/// Flujo de autenticación:
+///  1. Cliente hace POST /api/usuarios/login con email y contraseña.
+///  2. Se genera un JWT firmado con HMAC-SHA256 que contiene el Id, Correo y Rol.
+///  3. El cliente incluye el JWT en cada request como: Authorization: Bearer {token}.
+///  4. Los controladores validan el JWT automáticamente (configurado en Program.cs).
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class UsuariosController : ControllerBase
 {
-    private readonly IConfiguration _configuration;
+    private readonly IConfiguration _configuration; // Acceso a appsettings.json (JwtSettings)
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
@@ -162,29 +172,38 @@ public class UsuariosController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Genera un token JWT firmado con los datos del usuario.
+    /// El token contiene: Id de usuario (Sub), Correo (Email) y Rol como Claims.
+    /// Caduca según DurationInMinutes definido en appsettings.json > JwtSettings.
+    /// Para añadir más datos al token, agrega nuevas instancias de Claim al ClaimsIdentity.
+    /// </summary>
     private string GenerarTokenJWT(int userId, string email, string role)
     {
+        // Leer la configuración de JWT desde appsettings.json
         var jwtSettings = _configuration.GetSection("JwtSettings");
-        var key = Encoding.ASCII.GetBytes(jwtSettings["Key"]!);
+        var key = Encoding.ASCII.GetBytes(jwtSettings["Key"]!); // Clave secreta convertida a bytes
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
+            // Claims: datos que se incrustran en el payload del JWT (visibles al decodificar)
             Subject = new ClaimsIdentity(new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, email),
-                new Claim(ClaimTypes.Role, role)
+                new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()), // Identificador único del usuario
+                new Claim(JwtRegisteredClaimNames.Email, email),           // Correo del usuario
+                new Claim(ClaimTypes.Role, role)                           // Rol (Admin, Mecanico, etc.) para [Authorize(Roles=...)]
             }),
-            Expires = DateTime.UtcNow.AddMinutes(double.Parse(jwtSettings["DurationInMinutes"]!)),
-            Issuer = jwtSettings["Issuer"],
-            Audience = jwtSettings["Audience"],
+            Expires = DateTime.UtcNow.AddMinutes(double.Parse(jwtSettings["DurationInMinutes"]!)), // Expiración
+            Issuer = jwtSettings["Issuer"],       // Emisor del token (quién lo genera)
+            Audience = jwtSettings["Audience"],   // Audiencia (quién lo consume)
+            // Algoritmo de firma: HMAC-SHA256 con la clave secreta
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
 
         var tokenHandler = new JwtSecurityTokenHandler();
-        var token = tokenHandler.CreateToken(tokenDescriptor);
+        var token = tokenHandler.CreateToken(tokenDescriptor); // Crear el objeto token
 
-        return tokenHandler.WriteToken(token);
+        return tokenHandler.WriteToken(token); // Serializar como string Base64Url
     }
 }
 

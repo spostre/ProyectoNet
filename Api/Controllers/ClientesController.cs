@@ -1,4 +1,5 @@
-using Application.DTOs;
+using Api.DTOs;
+using Api.Interfaces;
 using Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -51,8 +52,7 @@ public class ClientesController : ControllerBase
         {
             var vehiculo = new Domain.Entities.Vehiculo
             {
-                Marca       = dto.Marca,
-                Modelo      = dto.Modelo,
+                ModeloId    = dto.ModeloId,
                 Anio        = dto.Anio,
                 Vin         = dto.Vin,
                 Kilometraje = dto.Kilometraje
@@ -63,7 +63,7 @@ public class ClientesController : ControllerBase
         }
 
         await _unitOfWork.CommitAsync();
-        return Ok(new { Message = $"{vehiculosCreados.Count} vehículo(s) agregado(s) al cliente Id {id}.", Vehiculos = vehiculosCreados.Select(v => new { v.Id, v.Marca, v.Modelo, v.Vin }) });
+        return Ok(new { Message = $"{vehiculosCreados.Count} vehículo(s) agregado(s) al cliente Id {id}.", Vehiculos = vehiculosCreados.Select(v => new { v.Id, v.ModeloId, v.Vin }) });
     }
 
     /// <summary>
@@ -129,7 +129,7 @@ public class ClientesController : ControllerBase
             var activas = ordenes.Where(o => o.Estado != Domain.Enums.EstadoOrden.Cerrada && o.Estado != Domain.Enums.EstadoOrden.Cancelada);
             if (activas.Any())
             {
-                return BadRequest(new { Message = $"No se puede eliminar el cliente porque su vehículo '{vehiculo.Marca} {vehiculo.Modelo}' (VIN: {vehiculo.Vin}) posee órdenes de servicio activas." });
+                return BadRequest(new { Message = $"No se puede eliminar el cliente porque su vehículo VIN: {vehiculo.Vin} posee órdenes de servicio activas." });
             }
         }
 

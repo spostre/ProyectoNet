@@ -1,4 +1,4 @@
-using Application.DTOs;
+using Api.DTOs;
 using Application.Interfaces;
 using AutoMapper;
 using Domain.Entities;
@@ -90,8 +90,7 @@ public class VehiculosController : ControllerBase
         var vehiculo = await _unitOfWork.Vehiculos.GetByIdAsync(id);
         if (vehiculo == null) return NotFound(new { Message = $"Vehículo con Id {id} no encontrado." });
 
-        vehiculo.Marca = dto.Marca;
-        vehiculo.Modelo = dto.Modelo;
+        vehiculo.ModeloId = dto.ModeloId;
         vehiculo.Anio = dto.Anio;
         vehiculo.Vin = dto.Vin;
         vehiculo.Kilometraje = dto.Kilometraje;

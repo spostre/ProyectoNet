@@ -37,7 +37,7 @@ El Recepcionista abre una Orden de Servicio enviando otro `POST`. Indica que veh
 
 ### Paso 4: El mecanico trabaja (Mecanico)
 Aqui es donde el mecanico interactua con la API. Cuando termina el trabajo fisico con el auto, abre Insomnia y envia un reporte mediante una peticion `PUT`.
-En esa peticion indica los repuestos que utilizo (ej: 2 filtros, 4 bujias) y cambia el estado a "Terminada".
+En esa peticion indica los repuestos que utilizo (ej: 2 filtros, 4 bujias) y cambia el estado a "ListaParaEntrega".
 El sistema recibe esto y automaticamente descuenta esos repuestos del stock del taller.
 
 ### Paso 5: Se genera la factura (Mecanico o Admin)
@@ -145,7 +145,7 @@ A continuacion, la lista completa de peticiones disponibles.
 
 * `GET /api/OrdenesServicio` (Todos) - Listar historial de ordenes.
 * `POST /api/OrdenesServicio` (Admin/Recep) - Abre una orden indicando `vehiculoId`, `tipoServicio` y `mecanicoId`. Entra en estado "Ingresada".
-* `PUT /api/OrdenesServicio/{id}/trabajo?nuevoEstado=Terminada` (Admin/Mecanico) - El **Mecanico envia esta peticion** para reportar los repuestos que uso. El sistema descuenta el stock. En el body (JSON) envia la lista exacta de repuestos, por ejemplo:
+* `PUT /api/OrdenesServicio/{id}/trabajo?nuevoEstado=ListaParaEntrega` (Admin/Mecanico) - El **Mecanico envia esta peticion** para reportar los repuestos que uso. El sistema descuenta el stock. En el body (JSON) envia la lista exacta de repuestos, por ejemplo:
   ```json
   [
     { "repuestoId": 1, "cantidad": 2 },
@@ -180,7 +180,7 @@ Sigue esta secuencia exacta para probar un ciclo de vida completo de inicio a fi
 | **4** | Recep. | `POST` | `/api/Clientes/registrar-con-vehiculo` | Registra a Maria y su Honda Civic |
 | **5** | Recep. | `POST` | `/api/OrdenesServicio` | Crea orden de Mantenimiento para el Civic |
 | **6** | Mecanico | `POST` | `/api/Usuarios/login` | Inicia sesion y obtiene su token |
-| **7** | Mecanico | `PUT` | `/api/OrdenesServicio/1/trabajo?nuevoEstado=Terminada` | Reporta que uso 2 filtros de aceite y la orden termina |
+| **7** | Mecanico | `PUT` | `/api/OrdenesServicio/1/trabajo?nuevoEstado=ListaParaEntrega` | Reporta que uso 2 filtros de aceite y la orden termina |
 | **8** | Mecanico | `POST` | `/api/OrdenesServicio/1/facturar` | La API suma los costos, genera Factura #1 y cierra la orden |
 | **9** | Recep. | `GET` | `/api/Facturas?clienteId=2` | Consulta cuanto le debe cobrar a Maria |
 | **10** | Admin | `GET` | `/api/Auditorias` | Revisa el historial de quien hizo los pasos 2 al 8 |

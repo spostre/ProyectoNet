@@ -1,4 +1,4 @@
-using Application.DTOs;
+using Api.DTOs;
 using Application.Interfaces;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
