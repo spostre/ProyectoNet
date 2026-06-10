@@ -17,8 +17,6 @@ namespace Api.Controllers;
 ///  - Mecánico/Admin: puede actualizar el trabajo realizado y generar facturas.
 ///  - Todos los autenticados: pueden consultar órdenes.
 /// </summary>
-[ApiController]
-[Route("api/[controller]")]
 public class OrdenesServicioController : ControllerBase
 {
     private readonly IOrdenServicioService _ordenServicioService; // Servicio de negocio con la lógica de órdenes

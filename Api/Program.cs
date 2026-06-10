@@ -1,9 +1,21 @@
+using Application.Interfaces;
+using Api.Interfaces;
+using Api.Mappings;
+using Api.Services;
+using AspNetCoreRateLimit;
+using Infrastructure.Data;
+using Infrastructure.UnitOfWork;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+
 // ============================================================
 // PROGRAM.CS - Punto de entrada de la aplicación ASP.NET Core
 // Aquí se configura toda la inyección de dependencias (IoC container)
 // y el pipeline de middlewares HTTP.
 // El orden importa: los servicios se registran primero (builder.*),
-// luego se configura el pipeline (app.*).
+// luego se configura el pipeline (app.*)
 // ============================================================
 
 var builder = WebApplication.CreateBuilder(args);
